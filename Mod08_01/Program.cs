@@ -3,18 +3,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 class LogFileAnalyzer
 {
     static void Main()
     {
-        string logFilePath = Path.Combine(Directory.GetCurrentDirectory(), "application.log");
-        string reportFilePath = "log_report.txt";
-        string jsonReportPath = "log_report.json";
-
-        Console.WriteLine($"Looking for log file at: {logFilePath}");
+        string logFilePath = "application.log";
+        string reportFilePath = "log_report.txt"; 
 
         if (!File.Exists(logFilePath))
         {
@@ -24,25 +20,18 @@ class LogFileAnalyzer
 
         try
         {
-            Dictionary<string, int> logLevelCounts = new Dictionary<string, int>
-            {
-                { "ERROR", 0 },
-                { "WARNING", 0 },
-                { "INFO", 0 }
-            };
-            List<string> errorMessages = new List<string>();
+            var logLevelCounts = new Dictionary<string, int> { { "ERROR", 0 }, { "WARNING", 0 }, { "INFO", 0 } };
+            var errorMessages = new List<string>();
             DateTime? firstTimestamp = null, lastTimestamp = null;
+            int totalEntries = 0;
 
-            string pattern = @"^\[(.*?)\] \[(.*?)\] (.*)$"; // Regex for log parsing
+            string pattern = @"^\[(.*?)\] \[(ERROR|WARNING|INFO)\] (.*)$";
 
             using (StreamReader reader = new StreamReader(logFilePath))
             {
-                Console.WriteLine("Reading log file...");
                 while (!reader.EndOfStream)
                 {
                     string line = reader.ReadLine();
-                    Console.WriteLine($"Read line: {line}");
-
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
                     Match match = Regex.Match(line, pattern);
@@ -52,8 +41,6 @@ class LogFileAnalyzer
                     string level = match.Groups[2].Value.ToUpper();
                     string message = match.Groups[3].Value;
 
-                    Console.WriteLine($"Parsed - Timestamp: {timestampStr}, Level: {level}, Message: {message}");
-
                     if (DateTime.TryParseExact(timestampStr, "yyyy-MM-dd HH:mm:ss",
                         CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime timestamp))
                     {
@@ -61,10 +48,8 @@ class LogFileAnalyzer
                         lastTimestamp = timestamp;
                     }
 
-                    if (logLevelCounts.ContainsKey(level))
-                    {
-                        logLevelCounts[level]++;
-                    }
+                    logLevelCounts[level]++;
+                    totalEntries++;
 
                     if (level == "ERROR")
                     {
@@ -85,13 +70,14 @@ class LogFileAnalyzer
                 writer.WriteLine($"Log File: {logFilePath}");
                 writer.WriteLine();
                 writer.WriteLine("Summary:");
-                writer.WriteLine($"- Total Entries: {logLevelCounts.Values.Sum()}");
+                writer.WriteLine($"- Total Entries: {totalEntries}");
                 writer.WriteLine($"- ERROR Count: {logLevelCounts["ERROR"]}");
                 writer.WriteLine($"- WARNING Count: {logLevelCounts["WARNING"]}");
                 writer.WriteLine($"- INFO Count: {logLevelCounts["INFO"]}");
                 writer.WriteLine($"- Time Span: {timeSpan.Hours} hours {timeSpan.Minutes} minutes");
                 writer.WriteLine();
                 writer.WriteLine("Error Messages:");
+
 
                 for (int i = 0; i < errorMessages.Count; i++)
                 {
@@ -102,26 +88,11 @@ class LogFileAnalyzer
                 writer.WriteLine("Report generated successfully!");
             }
 
-            Console.WriteLine("✅ Log analysis completed. Report saved to log_report.txt");
-
-            var summary = new
-            {
-                Date = DateTime.Now.ToString("yyyy-MM-dd"),
-                TotalEntries = logLevelCounts.Values.Sum(),
-                Errors = logLevelCounts["ERROR"],
-                Warnings = logLevelCounts["WARNING"],
-                Info = logLevelCounts["INFO"],
-                TimeSpan = $"{timeSpan.Hours} hours {timeSpan.Minutes} minutes",
-                ErrorMessages = errorMessages
-            };
-
-            string jsonReport = JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(jsonReportPath, jsonReport);
-            Console.WriteLine("✅ JSON report saved to log_report.json.");
+            Console.WriteLine("Log analysis completed. Report saved to log_report.txt");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ An error occurred while processing the log file: {ex.Message}");
+            Console.WriteLine($" An error occurred while processing the log file: {ex.Message}");
         }
     }
 }
