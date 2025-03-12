@@ -10,7 +10,7 @@ class LogFileAnalyzer
     static void Main()
     {
         string logFilePath = "application.log";
-        string reportFilePath = "log_report.txt"; 
+        string reportFilePath = "log_report.txt";
 
         if (!File.Exists(logFilePath))
         {
